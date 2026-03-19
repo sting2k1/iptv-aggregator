@@ -1,0 +1,166 @@
+name: Auto Download & Sync IPTV
+
+on:
+  schedule:
+    - cron: '0 */3 * * *'
+  workflow_dispatch:
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  download-and-sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Install tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq curl zip
+        
+    - name: Download M3U from sources.json
+      run: |
+        # 创建 output 目录（如果不存在）
+        mkdir -p output
+        
+        echo "开始下载 M3U 文件..."
+        SUCCESS_COUNT=0
+        FAIL_COUNT=0
+        CHANGED_COUNT=0
+        
+        jq -c '.sources[]' config/sources.json | while read source; do
+          name=$(echo $source | jq -r '.name')
+          url=$(echo $source | jq -r '.url')
+          
+          echo "下载: $name <- $url"
+          
+          # 下载临时文件
+          temp_file="output/${name}.tmp"
+          
+          if curl -L --max-time 30 --retry 2 --retry-delay 3 \
+               -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
+               -o "$temp_file" \
+               "$url"; then
+            
+            # 检查文件是否为空
+            if [ ! -s "$temp_file" ]; then
+              echo "警告: $name 下载结果为空，跳过"
+              rm -f "$temp_file"
+              FAIL_COUNT=$((FAIL_COUNT + 1))
+              continue
+            fi
+            
+            # 检查是否为有效的 M3U 文件（包含 #EXTM3U 标记）
+            if ! grep -q "^#EXTM3U" "$temp_file"; then
+              echo "警告: $name 不是有效的 M3U 文件，跳过"
+              rm -f "$temp_file"
+              FAIL_COUNT=$((FAIL_COUNT + 1))
+              continue
+            fi
+            
+            # 比较文件内容
+            if [ -f "output/$name" ]; then
+              # 计算哈希值
+              new_hash=$(sha256sum "$temp_file" | cut -d ' ' -f 1)
+              old_hash=$(sha256sum "output/$name" | cut -d ' ' -f 1)
+              
+              if [ "$new_hash" != "$old_hash" ]; then
+                # 文件有变化，更新
+                mv "$temp_file" "output/$name"
+                echo "成功: $name 有更新 ($(wc -c < output/$name) 字节)"
+                SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+                CHANGED_COUNT=$((CHANGED_COUNT + 1))
+              else
+                # 文件无变化，保留原文件
+                rm -f "$temp_file"
+                echo "提示: $name 无变化，跳过更新"
+                SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              fi
+            else
+              # 新文件，直接使用
+              mv "$temp_file" "output/$name"
+              echo "成功: $name 新文件 ($(wc -c < output/$name) 字节)"
+              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+              CHANGED_COUNT=$((CHANGED_COUNT + 1))
+            fi
+          else
+            echo "错误: $name 下载失败，保留原文件"
+            rm -f "$temp_file"
+            FAIL_COUNT=$((FAIL_COUNT + 1))
+          fi
+          
+          sleep 1
+        done
+        
+        # 生成日志
+        echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
+        echo "成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT" >> update_log.txt
+        echo "" >> update_log.txt
+        echo "文件列表:" >> update_log.txt
+        ls -lh output/ >> update_log.txt
+        
+        echo "下载统计 - 成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT"
+        ls -lh output/
+        
+        # 检查是否有变化
+        if [ $CHANGED_COUNT -gt 0 ]; then
+          echo "检测到文件变化，准备更新"
+          echo "CHANGED=true" >> $GITHUB_ENV
+        else
+          echo "无文件变化，跳过更新"
+          echo "CHANGED=false" >> $GITHUB_ENV
+        fi
+        
+    - name: Commit and push to GitHub (main)
+      if: env.CHANGED == 'true'
+      run: |
+        git config user.email "action@github.com"
+        git config user.name "GitHub Action"
+        
+        # 删除 GitHub 上旧的跟踪文件（关键步骤）
+        git rm -r --cached output/ 2>/dev/null || true
+        git rm --cached output.zip 2>/dev/null || true
+        
+        # 压缩全新的 output
+        rm -f output.zip
+        zip -r output.zip output/
+        
+        # 添加新的 output/ 和 output.zip
+        git add output/ output.zip update_log.txt
+        
+        # 提交并推送
+        git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" || echo "无变更"
+        git push origin main
+        
+    - name: Push output only to Gitee (force overwrite)
+      if: env.CHANGED == 'true'
+      env:
+        GITEE_USER: ${{ secrets.GITEE_USER }}
+        GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        GITEE_REPO: ${{ secrets.GITEE_REPO }}
+      run: |
+        # 只推送 output/ 和 output.zip 到 Gitee（保持原有3个文件）
+        mkdir -p /tmp/gitee-push
+        cp -r output/ /tmp/gitee-push/
+        cp output.zip /tmp/gitee-push/
+        cp update_log.txt /tmp/gitee-push/
+        
+        cd /tmp/gitee-push
+        
+        git init
+        git config user.email "action@github.com"
+        git config user.name "GitHub Action"
+        
+        git remote add origin "https://${GITEE_USER}:${GITEE_TOKEN}@gitee.com/${GITEE_USER}/${GITEE_REPO}.git"
+        
+        git add .
+        git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)"
+        
+        git push origin master --force
+        
+        echo "已推送全新 output/ 和 output.zip 到 Gitee"
