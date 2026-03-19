@@ -1,10 +1,11 @@
-下载时间: 2026-03-19 00:01:35 (北京时间)
-成功: 0, 失败: 0
+下载时间: 2026-03-20 06:16:57 (北京时间)
+成功: 6, 失败: 0, 变化: 6
 
 文件列表:
-total 2.8M
--rw-r--r-- 1 runner runner 1.4M Mar 19 00:01 CCSH
--rw-r--r-- 1 runner runner 1.3M Mar 19 00:01 alantang1977
--rw-r--r-- 1 runner runner  67K Mar 19 00:01 bestfan
--rw-r--r-- 1 runner runner 9.2K Mar 19 00:01 cnTV_AutoUpdate
--rw-r--r-- 1 runner runner 9.2K Mar 19 00:01 hujingguang
+total 5.8M
+-rw-r--r-- 1 runner runner 1012K Mar 20 06:16 CCSH
+-rw-r--r-- 1 runner runner  487K Mar 20 06:16 Free-TV
+-rw-r--r-- 1 runner runner  1.3M Mar 20 06:16 alantang1977
+-rw-r--r-- 1 runner runner   48K Mar 20 06:16 bestfan
+-rw-r--r-- 1 runner runner  7.9K Mar 20 06:16 hujingguang
+-rw-r--r-- 1 runner runner  3.0M Mar 20 06:16 kimwang1978
