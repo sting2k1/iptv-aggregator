@@ -33,15 +33,15 @@ jobs:
         FAIL_COUNT=0
         CHANGED_COUNT=0
         
-        # 【修复】使用更稳健的 while 循环，避免空行和特殊字符问题
-        jq -c '.sources[]' config/sources.json | while IFS= read -r source || [[ -n "$source" ]]; do
+        # 【关键修复】使用进程替换 < <(...) 代替管道 |，避免子 Shell 问题
+        while IFS= read -r source || [[ -n "$source" ]]; do
           # 跳过空行
           [ -z "$source" ] && continue
           
           name=$(echo "$source" | jq -r '.name // empty')
           url=$(echo "$source" | jq -r '.url // empty')
           
-          # 【新增】检查 name 和 url 是否为空
+          # 检查 name 和 url 是否为空
           if [ -z "$name" ] || [ -z "$url" ]; then
             echo "警告: 检测到空条目，跳过 (name: ${name:-'空'}, url: ${url:-'空'})"
             FAIL_COUNT=$((FAIL_COUNT + 1))
@@ -106,9 +106,10 @@ jobs:
           fi
           
           sleep 1
-        done
+        # 【关键修复】使用进程替换，这样变量修改才能在循环外保持
+        done < <(jq -c '.sources[]' config/sources.json)
         
-        # 生成日志
+        # 生成日志（此时变量值是正确的）
         echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
         echo "成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT" >> update_log.txt
         echo "" >> update_log.txt
@@ -118,24 +119,16 @@ jobs:
         echo "下载统计 - 成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT"
         ls -lh output/
         
-        # 【修复】使用文件标记代替变量传递（解决变量作用域问题）
+        # 检查是否有变化或首次运行
         if [ $CHANGED_COUNT -gt 0 ]; then
           echo "检测到文件变化，准备更新"
-          touch /tmp/has_changes
-        else
-          echo "无文件变化"
-        fi
-        
-        # 【新增】检查是否首次运行（output目录为空或没有.gitkeep）
-        if [ ! -f "output/.gitkeep" ] && [ $SUCCESS_COUNT -gt 0 ]; then
+          echo "CHANGED=true" >> $GITHUB_ENV
+        elif [ ! -f "output/.gitkeep" ] && [ $SUCCESS_COUNT -gt 0 ]; then
           echo "首次运行或重建目录，准备提交"
-          touch /tmp/has_changes
           touch output/.gitkeep
-        fi
-        
-        if [ -f /tmp/has_changes ]; then
           echo "CHANGED=true" >> $GITHUB_ENV
         else
+          echo "无文件变化"
           echo "CHANGED=false" >> $GITHUB_ENV
         fi
         
@@ -168,7 +161,7 @@ jobs:
         GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         GITEE_REPO: ${{ secrets.GITEE_REPO }}
       run: |
-        # 只推送 output/ 和 output.zip 到 Gitee（保持原有3个文件）
+        # 只推送 output/ 和 output.zip 到 Gitee
         mkdir -p /tmp/gitee-push
         cp -r output/ /tmp/gitee-push/
         cp output.zip /tmp/gitee-push/
@@ -188,36 +181,6 @@ jobs:
         git push origin master --force
         
         echo "已推送全新 output/ 和 output.zip 到 Gitee"
-        while read source; do
-          name=$(echo $source | jq -r '.name')
-          url=$(echo $source | jq -r '.url')
-          
-          echo "下载: $name <- $url"
-          
-          # 下载临时文件
-          temp_file="output/${name}.tmp"
-          
-          if curl -L --max-time 30 --retry 2 --retry-delay 3 \
-               -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
-               -o "$temp_file" \
-               "$url"; then
-            
-            # 检查文件是否为空
-            if [ ! -s "$temp_file" ]; then
-              echo "警告: $name 下载结果为空，跳过"
-              rm -f "$temp_file"
-              FAIL_COUNT=$((FAIL_COUNT + 1))
-              continue
-            fi
-            
-            # 检查是否为有效的 M3U 文件（包含 #EXTM3U 标记）
-            if ! grep -q "^#EXTM3U" "$temp_file"; then
-              echo "警告: $name 不是有效的 M3U 文件，跳过"
-              rm -f "$temp_file"
-              FAIL_COUNT=$((FAIL_COUNT + 1))
-              continue
-            fi
-            
             # 比较文件内容
             if [ -f "output/$name" ]; then
               # 计算哈希值
@@ -250,9 +213,10 @@ jobs:
           fi
           
           sleep 1
-        done < <(jq -c '.sources[]' config/sources.json)  # 【关键修复】进程替换，变量可在循环外访问
+        # 【关键修复】使用进程替换，这样变量修改才能在循环外保持
+        done < <(jq -c '.sources[]' config/sources.json)
         
-        # 生成日志
+        # 生成日志（此时变量值是正确的）
         echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
         echo "成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT" >> update_log.txt
         echo "" >> update_log.txt
@@ -262,14 +226,16 @@ jobs:
         echo "下载统计 - 成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT"
         ls -lh output/
         
-        # 【关键修复】判断是否提交：有变化 或 首次运行（output目录为空或没有.gitkeep标记）
-        if [ $CHANGED_COUNT -gt 0 ] || [ ! -f "output/.gitkeep" ]; then
-          echo "检测到文件变化或首次运行，准备更新"
+        # 检查是否有变化或首次运行
+        if [ $CHANGED_COUNT -gt 0 ]; then
+          echo "检测到文件变化，准备更新"
           echo "CHANGED=true" >> $GITHUB_ENV
-          # 创建标记文件，表示output目录已初始化
+        elif [ ! -f "output/.gitkeep" ] && [ $SUCCESS_COUNT -gt 0 ]; then
+          echo "首次运行或重建目录，准备提交"
           touch output/.gitkeep
+          echo "CHANGED=true" >> $GITHUB_ENV
         else
-          echo "无文件变化，跳过更新"
+          echo "无文件变化"
           echo "CHANGED=false" >> $GITHUB_ENV
         fi
         
@@ -279,7 +245,7 @@ jobs:
         git config user.email "action@github.com"
         git config user.name "GitHub Action"
         
-        # 确保 output 目录在 Git 跟踪中（添加 .gitkeep 防止空目录不被跟踪）
+        # 确保 output 目录在 Git 跟踪中
         if [ -f "output/.gitkeep" ]; then
           git add output/.gitkeep
         fi
@@ -291,138 +257,8 @@ jobs:
         # 添加所有变更
         git add output/ output.zip update_log.txt
         
-        # 提交并推送（--allow-empty 防止意外失败）
-        git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" --allow-empty
-        git push origin main
-        
-    - name: Push output only to Gitee (force overwrite)
-      if: env.CHANGED == 'true'
-      env:
-        GITEE_USER: ${{ secrets.GITEE_USER }}
-        GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-        GITEE_REPO: ${{ secrets.GITEE_REPO }}
-      run: |
-        # 只推送 output/ 和 output.zip 到 Gitee（保持原有3个文件）
-        mkdir -p /tmp/gitee-push
-        cp -r output/ /tmp/gitee-push/
-        cp output.zip /tmp/gitee-push/
-        cp update_log.txt /tmp/gitee-push/
-        
-        cd /tmp/gitee-push
-        
-        git init
-        git config user.email "action@github.com"
-        git config user.name "GitHub Action"
-        
-        git remote add origin "https://${GITEE_USER}:${GITEE_TOKEN}@gitee.com/${GITEE_USER}/${GITEE_REPO}.git"
-        
-        git add .
-        git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)"
-        
-        git push origin master --force
-        
-        echo "已推送全新 output/ 和 output.zip 到 Gitee"
-          name=$(echo $source | jq -r '.name')
-          url=$(echo $source | jq -r '.url')
-          
-          echo "下载: $name <- $url"
-          
-          # 下载临时文件
-          temp_file="output/${name}.tmp"
-          
-          if curl -L --max-time 30 --retry 2 --retry-delay 3 \
-               -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
-               -o "$temp_file" \
-               "$url"; then
-            
-            # 检查文件是否为空
-            if [ ! -s "$temp_file" ]; then
-              echo "警告: $name 下载结果为空，跳过"
-              rm -f "$temp_file"
-              FAIL_COUNT=$((FAIL_COUNT + 1))
-              continue
-            fi
-            
-            # 检查是否为有效的 M3U 文件（包含 #EXTM3U 标记）
-            if ! grep -q "^#EXTM3U" "$temp_file"; then
-              echo "警告: $name 不是有效的 M3U 文件，跳过"
-              rm -f "$temp_file"
-              FAIL_COUNT=$((FAIL_COUNT + 1))
-              continue
-            fi
-            
-            # 比较文件内容
-            if [ -f "output/$name" ]; then
-              # 计算哈希值
-              new_hash=$(sha256sum "$temp_file" | cut -d ' ' -f 1)
-              old_hash=$(sha256sum "output/$name" | cut -d ' ' -f 1)
-              
-              if [ "$new_hash" != "$old_hash" ]; then
-                # 文件有变化，更新
-                mv "$temp_file" "output/$name"
-                echo "成功: $name 有更新 ($(wc -c < output/$name) 字节)"
-                SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-                CHANGED_COUNT=$((CHANGED_COUNT + 1))
-              else
-                # 文件无变化，保留原文件
-                rm -f "$temp_file"
-                echo "提示: $name 无变化，跳过更新"
-                SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-              fi
-            else
-              # 新文件，直接使用
-              mv "$temp_file" "output/$name"
-              echo "成功: $name 新文件 ($(wc -c < output/$name) 字节)"
-              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-              CHANGED_COUNT=$((CHANGED_COUNT + 1))
-            fi
-          else
-            echo "错误: $name 下载失败，保留原文件"
-            rm -f "$temp_file"
-            FAIL_COUNT=$((FAIL_COUNT + 1))
-          fi
-          
-          sleep 1
-        done
-        
-        # 生成日志
-        echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
-        echo "成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT" >> update_log.txt
-        echo "" >> update_log.txt
-        echo "文件列表:" >> update_log.txt
-        ls -lh output/ >> update_log.txt
-        
-        echo "下载统计 - 成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT"
-        ls -lh output/
-        
-        # 检查是否有变化
-        if [ $CHANGED_COUNT -gt 0 ]; then
-          echo "检测到文件变化，准备更新"
-          echo "CHANGED=true" >> $GITHUB_ENV
-        else
-          echo "无文件变化，跳过更新"
-          echo "CHANGED=false" >> $GITHUB_ENV
-        fi
-        
-    - name: Commit and push to GitHub (main)
-      if: env.CHANGED == 'true'
-      run: |
-        git config user.email "action@github.com"
-        git config user.name "GitHub Action"
-        
-        # 删除 GitHub 上旧的跟踪文件（关键步骤）
-        git rm -r --cached output/ 2>/dev/null || true
-        git rm --cached output.zip 2>/dev/null || true
-        
-        # 压缩全新的 output
-        rm -f output.zip
-        zip -r output.zip output/
-        
-        # 添加新的 output/ 和 output.zip
-        git add output/ output.zip update_log.txt
-        
         # 提交并推送
-        git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" || echo "无变更"
+        git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" || echo "无变更需要提交"
         git push origin main
         
     - name: Push output only to Gitee (force overwrite)
@@ -432,7 +268,7 @@ jobs:
         GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
         GITEE_REPO: ${{ secrets.GITEE_REPO }}
       run: |
-        # 只推送 output/ 和 output.zip 到 Gitee（保持原有3个文件）
+        # 只推送 output/ 和 output.zip 到 Gitee
         mkdir -p /tmp/gitee-push
         cp -r output/ /tmp/gitee-push/
         cp output.zip /tmp/gitee-push/
