@@ -1,27 +1,27 @@
 {
   "sources": [
     {
-      "name": "kimwang1978",
+      "name": "kimwang1978.m3u",
       "url": "https://raw.githubusercontent.com/kimwang1978/collect-txt/refs/heads/main/bbxx.m3u"
     },
     {
-      "name": "alantang1977",
+      "name": "alantang1977.m3u",
       "url": "https://raw.githubusercontent.com/alantang1977/iptv_api/refs/heads/main/output/live_ipv4.m3u"
     },
     {
-      "name": "bestfan",
+      "name": "bestfan.m3u",
       "url": "https://raw.githubusercontent.com/best-fan/iptv-sources/refs/heads/main/cn_all.m3u8"
     },
     {
-      "name": "aceracom_iptv",
+      "name": "aceracom_iptv.m3u",
       "url": "https://raw.githubusercontent.com/aceray50/iptv/refs/heads/main/tv.m3u"
     },
     {
-      "name": "CCSH",
+      "name": "CCSH.m3u",
       "url": "https://raw.githubusercontent.com/CCSH/IPTV/refs/heads/main/live.m3u"
     },
         {
-      "name": "Free-TV",
+      "name": "Free-TV.m3u",
       "url": "https://raw.githubusercontent.com/Free-TV/IPTV/refs/heads/master/playlist.m3u8"
     }
   ]
