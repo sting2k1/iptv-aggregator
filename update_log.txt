@@ -1,11 +1,11 @@
-下载时间: 2026-03-23 05:18:05 (北京时间)
-成功: 6, 失败: 0, 变化: 3
+下载时间: 2026-03-23 12:57:34 (北京时间)
+成功: 6, 失败: 0, 变化: 2
 
 文件列表:
 total 6.6M
--rw-r--r-- 1 runner runner 1.1M Mar 23 05:18 CCSH.m3u
--rw-r--r-- 1 runner runner 487K Mar 23 05:17 Free-TV.m3u
--rw-r--r-- 1 runner runner 1.3M Mar 23 05:18 aceracom_iptv.m3u
--rw-r--r-- 1 runner runner 890K Mar 23 05:17 alantang1977.m3u
--rw-r--r-- 1 runner runner  48K Mar 23 05:18 bestfan.m3u
--rw-r--r-- 1 runner runner 3.0M Mar 23 05:17 kimwang1978.m3u
+-rw-r--r-- 1 runner runner 1.1M Mar 23 12:57 CCSH.m3u
+-rw-r--r-- 1 runner runner 487K Mar 23 12:57 Free-TV.m3u
+-rw-r--r-- 1 runner runner 1.3M Mar 23 12:57 aceracom_iptv.m3u
+-rw-r--r-- 1 runner runner 890K Mar 23 12:57 alantang1977.m3u
+-rw-r--r-- 1 runner runner  48K Mar 23 12:57 bestfan.m3u
+-rw-r--r-- 1 runner runner 2.9M Mar 23 12:57 kimwang1978.m3u
