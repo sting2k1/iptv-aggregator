@@ -75,6 +75,7 @@ jobs:
             fi
             
             # 比较文件内容
+            echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
             if [ -f "IPTV_Nodes/$name" ]; then
               # 计算哈希值
               new_hash=$(sha256sum "$temp_file" | cut -d ' ' -f 1)
@@ -83,7 +84,8 @@ jobs:
               if [ "$new_hash" != "$old_hash" ]; then
                 # 文件有变化，更新
                 mv "$temp_file" "IPTV_Nodes/$name"
-                echo "成功: $name 有更新 ($(wc -c < IPTV_Nodes/$name) 字节)"
+                echo "成功: $name 有更新 ($(wc -c < IPTV_Nodes/$name) 字节)" | tee -a update_log.txt
+                # echo " $name 有更新 ($(wc -c < IPTV_Nodes/$name) 字节)" >> update_log.txt
                 SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
                 CHANGED_COUNT=$((CHANGED_COUNT + 1))
               else
@@ -95,7 +97,8 @@ jobs:
             else
               # 新文件，直接使用（包括被删除后重新下载的情况）
               mv "$temp_file" "IPTV_Nodes/$name"
-              echo "成功: $name 新文件 ($(wc -c < IPTV_Nodes/$name) 字节)"
+              echo "成功: $name 新文件 ($(wc -c < IPTV_Nodes/$name) 字节)" | tee -a update_log.txt
+              # echo " $name 新文件 ($(wc -c < IPTV_Nodes/$name) 字节)" >> update_log.txt
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
               CHANGED_COUNT=$((CHANGED_COUNT + 1))
             fi
@@ -109,7 +112,8 @@ jobs:
         done < <(jq -c '.sources[]' config/sources.json)
         
         # 生成日志（此时变量值是正确的）
-        echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
+        # echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
+        
         echo "成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT" >> update_log.txt
         echo "" >> update_log.txt
         echo "文件列表:" >> update_log.txt
