@@ -29,7 +29,7 @@ jobs:
         mkdir -p IPTV_Nodes
         
         echo "开始下载 M3U 文件..."
-        echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
+        echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S')" > update_log.txt
         
         SUCCESS_COUNT=0
         FAIL_COUNT=0
@@ -55,7 +55,7 @@ jobs:
           # 下载临时文件
           temp_file="IPTV_Nodes/${name}.tmp"
           
-          if curl -L --max-time 30 --retry 2 --retry-delay 3 \
+          if curl -L --max-time 15 --retry 1 --retry-delay 3 \
                -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)" \
                -o "$temp_file" \
                "$url" 2>/dev/null; then
@@ -107,8 +107,8 @@ jobs:
             FAIL_COUNT=$((FAIL_COUNT + 1))
           fi
           
-          sleep 1
         done < <(jq -c '.sources[]' config/sources.json)
+        echo "下载完成时间: $(date '+%Y-%m-%d %H:%M:%S')" | tee -a update_log.txt
         
         # 生成日志（此时变量值是正确的）
         echo "成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT" | tee -a update_log.txt
@@ -150,6 +150,7 @@ jobs:
         # 提交并推送
         git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" || echo "无变更需要提交"
         git push origin main
+        echo "推送到GitHub完成时间: $(date '+%Y-%m-%d %H:%M:%S')"
         
     - name: Push IPTV_Nodes to Gitee (force overwrite)
       if: env.CHANGED == 'true'
@@ -173,8 +174,9 @@ jobs:
         git remote add origin "https://${GITEE_USER}:${GITEE_TOKEN}@gitee.com/${GITEE_USER}/${GITEE_REPO}.git"
         
         git add .
-        git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)"
+        git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') "
         
         git push origin master --force
         
         echo "已推送全新 IPTV_Nodes/ 和 IPTV_Nodes.zip 到 Gitee"
+        echo "推送到Gitee完成时间: $(date '+%Y-%m-%d %H:%M:%S')"
