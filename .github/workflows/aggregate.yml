@@ -112,7 +112,7 @@ jobs:
         done < <(jq -c '.sources[]' config/sources.json)
         
         # 生成日志（此时变量值是正确的）
-        # echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
+        # echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" >> update_log.txt
         
         echo "成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT" >> update_log.txt
         echo "" >> update_log.txt
