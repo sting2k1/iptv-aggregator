@@ -150,7 +150,6 @@ jobs:
         # 提交并推送
         git commit -m "Update: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" || echo "无变更需要提交"
         git push origin main
-        echo "推送到GitHub完成时间: $(date '+%Y-%m-%d %H:%M:%S')"
         
     - name: Push IPTV_Nodes to Gitee (force overwrite)
       if: env.CHANGED == 'true'
@@ -179,4 +178,4 @@ jobs:
         git push origin master --force
         
         echo "已推送全新 IPTV_Nodes/ 和 IPTV_Nodes.zip 到 Gitee"
-        echo "推送到Gitee完成时间: $(date '+%Y-%m-%d %H:%M:%S')"
+
