@@ -29,6 +29,8 @@ jobs:
         mkdir -p IPTV_Nodes
         
         echo "开始下载 M3U 文件..."
+        echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
+        
         SUCCESS_COUNT=0
         FAIL_COUNT=0
         CHANGED_COUNT=0
@@ -67,7 +69,7 @@ jobs:
             fi
             
             # 检查是否为有效的 M3U 文件（包含 #EXTM3U 标记）
-            if ! grep -q "^#EXTM3U" "$temp_file"; then
+            if ! head -n 5 "$temp_file" | grep -qi "#EXTM3U"; then
               echo "警告: $name 不是有效的 M3U 文件，跳过"
               rm -f "$temp_file"
               FAIL_COUNT=$((FAIL_COUNT + 1))
@@ -75,7 +77,6 @@ jobs:
             fi
             
             # 比较文件内容
-            echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" > update_log.txt
             if [ -f "IPTV_Nodes/$name" ]; then
               # 计算哈希值
               new_hash=$(sha256sum "$temp_file" | cut -d ' ' -f 1)
@@ -85,7 +86,6 @@ jobs:
                 # 文件有变化，更新
                 mv "$temp_file" "IPTV_Nodes/$name"
                 echo "成功: $name 有更新 ($(wc -c < IPTV_Nodes/$name) 字节)" | tee -a update_log.txt
-                # echo " $name 有更新 ($(wc -c < IPTV_Nodes/$name) 字节)" >> update_log.txt
                 SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
                 CHANGED_COUNT=$((CHANGED_COUNT + 1))
               else
@@ -98,7 +98,6 @@ jobs:
               # 新文件，直接使用（包括被删除后重新下载的情况）
               mv "$temp_file" "IPTV_Nodes/$name"
               echo "成功: $name 新文件 ($(wc -c < IPTV_Nodes/$name) 字节)" | tee -a update_log.txt
-              # echo " $name 新文件 ($(wc -c < IPTV_Nodes/$name) 字节)" >> update_log.txt
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
               CHANGED_COUNT=$((CHANGED_COUNT + 1))
             fi
@@ -112,15 +111,10 @@ jobs:
         done < <(jq -c '.sources[]' config/sources.json)
         
         # 生成日志（此时变量值是正确的）
-        # echo "下载时间: $(date '+%Y-%m-%d %H:%M:%S') (北京时间)" >> update_log.txt
-        
-        echo "成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT" >> update_log.txt
+        echo "成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT" | tee -a update_log.txt
         echo "" >> update_log.txt
         echo "文件列表:" >> update_log.txt
-        ls -lh IPTV_Nodes/ >> update_log.txt
-        
-        echo "下载统计 - 成功: $SUCCESS_COUNT, 失败: $FAIL_COUNT, 变化: $CHANGED_COUNT"
-        ls -lh IPTV_Nodes/
+        ls -lh IPTV_Nodes/ | tee -a update_log.txt
         
         # 检查是否有变化或首次运行
         if [ $CHANGED_COUNT -gt 0 ]; then
