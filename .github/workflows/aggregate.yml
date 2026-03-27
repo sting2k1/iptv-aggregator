@@ -116,13 +116,9 @@ jobs:
         echo "文件列表:" >> update_log.txt
         ls -lh IPTV_Nodes/ | tee -a update_log.txt
         
-        # 检查是否有变化或首次运行
+        # 检查是否有变化
         if [ $CHANGED_COUNT -gt 0 ]; then
           echo "检测到文件变化，准备更新"
-          echo "CHANGED=true" >> $GITHUB_ENV
-        elif [ ! -f "IPTV_Nodes/.gitkeep" ] && [ $SUCCESS_COUNT -gt 0 ]; then
-          echo "首次运行或重建目录，准备提交"
-          touch IPTV_Nodes/.gitkeep
           echo "CHANGED=true" >> $GITHUB_ENV
         else
           echo "无文件变化"
@@ -135,14 +131,9 @@ jobs:
         git config user.email "action@github.com"
         git config user.name "GitHub Action"
         
-        # 确保 IPTV_Nodes 目录在 Git 跟踪中
-        if [ -f "IPTV_Nodes/.gitkeep" ]; then
-          git add IPTV_Nodes/.gitkeep
-        fi
-        
-        # 压缩 IPTV_Nodes 目录（排除 .gitkeep）
+        # 压缩 IPTV_Nodes 目录
         rm -f IPTV_Nodes.zip
-        zip -r IPTV_Nodes.zip IPTV_Nodes/ -x "*.gitkeep"
+        zip -r IPTV_Nodes.zip IPTV_Nodes/
         
         # 添加所有变更
         git add IPTV_Nodes/ IPTV_Nodes.zip update_log.txt
@@ -178,4 +169,3 @@ jobs:
         git push origin master --force
         
         echo "已推送全新 IPTV_Nodes/ 和 IPTV_Nodes.zip 到 Gitee"
-
