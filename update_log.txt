@@ -1,13 +1,13 @@
-下载时间: 2026-08-11 05:31:49
-成功: CCSH.m3u 有更新 (1119000 字节)
-下载完成时间: 2026-08-11 05:31:50
+下载时间: 2026-08-11 08:58:16
+成功: bestfan.m3u 有更新 (84700 字节)
+下载完成时间: 2026-08-11 08:58:17
 成功: 6, 失败: 0, 变化: 1
 
 文件列表:
 total 9.0M
--rw-r--r-- 1 runner runner 1.1M Aug 11 05:31 CCSH.m3u
--rw-r--r-- 1 runner runner 518K Aug 11 05:31 Free-TV.m3u
--rw-r--r-- 1 runner runner 1.3M Aug 11 05:31 aceracom_iptv.m3u
--rw-r--r-- 1 runner runner 2.7M Aug 11 05:31 alantang1977.m3u
--rw-r--r-- 1 runner runner  90K Aug 11 05:31 bestfan.m3u
--rw-r--r-- 1 runner runner 3.5M Aug 11 05:31 kimwang1978.m3u
+-rw-r--r-- 1 runner runner 1.1M Aug 11 08:58 CCSH.m3u
+-rw-r--r-- 1 runner runner 518K Aug 11 08:58 Free-TV.m3u
+-rw-r--r-- 1 runner runner 1.3M Aug 11 08:58 aceracom_iptv.m3u
+-rw-r--r-- 1 runner runner 2.7M Aug 11 08:58 alantang1977.m3u
+-rw-r--r-- 1 runner runner  83K Aug 11 08:58 bestfan.m3u
+-rw-r--r-- 1 runner runner 3.5M Aug 11 08:58 kimwang1978.m3u
